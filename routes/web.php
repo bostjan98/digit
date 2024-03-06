@@ -20,5 +20,5 @@ Route::get('/', function () {
 
 
 
-Route::post('/import-csv', [ImportUserController::class, 'importCSV'])->name('import-csv');;
-Route::get('/upload-csv', [ImportUserController::class, 'showUploadForm']);
+Route::post('/import-csv', [ImportUserController::class, 'importCSV'])->name('import-csv');
+Route::get('/upload-csv', [ImportUserController::class, 'showUploadForm'])->name('upload-csv');

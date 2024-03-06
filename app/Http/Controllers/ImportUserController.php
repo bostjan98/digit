@@ -41,10 +41,13 @@ class ImportUserController extends Controller
             $this->processCSV($path);
             
             // Return success response
-            return response()->json(['message' => 'CSV data imported successfully']);
+            return response()->json(['message' => 'CSV data imported successfully'])
+            ->header('Refresh', '7;url=' . route('upload-csv'));
+           
         } else {
             // Return error response if file upload failed
-            return response()->json(['error' => 'File upload failed'], 400);
+            return response()->json(['error' => 'File upload failed'], 400)
+            ->header('Refresh', '7;url=' . route('upload-csv'));
         }
     }
 
