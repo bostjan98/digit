@@ -9,6 +9,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
 use App\Models\ImportUser;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ImportCSVJob implements ShouldQueue
 {
@@ -35,7 +37,7 @@ class ImportCSVJob implements ShouldQueue
     {
         $file = fopen(storage_path('app/' . $this->path), 'r');
         $headers = null;
-        $rows = collect([]);
+        $rows = [];
 
         $firstRowSkipped = false; // Flag to track if the first row has been skipped
         $rowCount = 0;
@@ -46,33 +48,28 @@ class ImportCSVJob implements ShouldQueue
                 $headers = explode(';', $row[0]); // Split the first row on the semicolon delimiter
                 continue; // Skip the first row
             }
-
             $headers[0]=0;
             $headers[1]=1;
             $headers[2]=2;
             $headers[3]=3;
             $headers[4]=4;
-
             // Combine headers with row data
             $rowData = array_combine($headers, explode(';', $row[0]));
 
-            // Push row data to collection
-            $rows->push($rowData);
+            // Push row data to array
+            $rows[] = $rowData;
             $rowCount++;
 
-            if ($rows->count() == 1000) {
-                // Convert collection to array for processing
-                $arrayData = $rows->toArray();
-                $this->processRecords($arrayData);
-                $rows = collect([]); // Reset the collection
+            if ($rowCount == 1000) {
+                $this->processRecords($rows);
+                $rows = []; // Reset the array
                 $rowCount = 0;
             }
         }
 
         // Process remaining rows if any
-        if ($rows->count() > 0) {
-            $arrayData = $rows->toArray();
-            $this->processRecords($arrayData);
+        if (!empty($rows)) {
+            $this->processRecords($rows);
         }
 
         fclose($file);  
@@ -82,28 +79,46 @@ class ImportCSVJob implements ShouldQueue
 
     protected function processRecords($rows)
     {
-       
-        foreach ($rows as $row) {
-            
-            $emso = $row[0];
-            $existingUser = ImportUser::where('emso', $emso)->first();
+        $currentTimestamp = Carbon::now();
 
-            if ($existingUser) {
-                $existingUser->update([
+        // Bulk insertion/update using database transactions
+        DB::transaction(function () use ($rows, $currentTimestamp) {
+            $updates = [];
+            $inserts = [];
+
+            foreach ($rows as $row) {
+                $emso = $row[0];
+                $existingUser = ImportUser::where('emso', $emso)->first();
+
+                $data = [
                     'name_surname' => $row[1],
                     'country' => $row[2],
                     'age' => $row[3],
-                    'descriptions' => $row[4]
-                ]);
-            } else {
-                ImportUser::create([
-                    'emso' => $emso,
-                    'name_surname' => $row[1],
-                    'country' => $row[2],
-                    'age' => $row[3],
-                    'descriptions' => $row[4]
-                ]);
+                    'descriptions' => $row[4],
+                    'updated_at' => $currentTimestamp,
+                ];
+
+                if ($existingUser) {
+                    $updates[] = $data + ['emso' => $emso];
+                } else {
+                    $inserts[] = $data + [
+                        'emso' => $emso,
+                        'created_at' => $currentTimestamp,
+                    ];
+                }
             }
-        }
+
+            if (!empty($updates)) {
+                // Bulk update existing records
+                foreach (array_chunk($updates, 1000) as $chunk) {
+                    ImportUser::upsert($chunk, ['emso'], array_keys($chunk[0]));
+                }
+            }
+
+            if (!empty($inserts)) {
+                // Bulk insert new records
+                ImportUser::insert($inserts);
+            }
+        });
     }
 }

@@ -10,12 +10,13 @@ class CreateImportUsersTable extends Migration
     {
         Schema::create('import_users', function (Blueprint $table) {
             $table->id();
-            $table->string('emso', 13)->unique();
+            $table->unsignedBigInteger('emso')->unique();
             $table->string('name_surname', 255);
             $table->string('country', 50);
             $table->unsignedTinyInteger('age');
             $table->text('descriptions')->nullable();
-            $table->timestamps();
+            $table->timestamp('created_at')->useCurrent(); // Automatically set created_at column on insert
+            $table->timestamp('updated_at')->useCurrent()->nullable(); // Automatically update updated_at column on update
         });
     }
 

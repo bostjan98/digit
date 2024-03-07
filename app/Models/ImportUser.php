@@ -11,4 +11,15 @@ class ImportUser extends Model
     
     protected $table = 'import_users';
     protected $guarded = [];
+    
+    public $timestamps = false;
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->created_at = now();
+        });
+    }
 }
