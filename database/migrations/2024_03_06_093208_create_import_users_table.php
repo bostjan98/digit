@@ -10,7 +10,7 @@ class CreateImportUsersTable extends Migration
     {
         Schema::create('import_users', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('emso')->unique();
+            $table->string('emso', 13)->unique();
             $table->string('name_surname', 255);
             $table->string('country', 50);
             $table->unsignedTinyInteger('age');
