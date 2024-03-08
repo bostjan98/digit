@@ -49,11 +49,11 @@ class ImportCSVJob implements ShouldQueue
                 continue; // Skip the first row
             }
             $headers = [
-                0 => 0,
-                1 => 1,
-                2 => 2,
-                3 => 3,
-                4 => 4,
+                0 => 'emso',
+                1 => 'name',
+                2 => 'age',
+                3 => 'country',
+                4 => 'description',
 
             ];
             
@@ -91,34 +91,35 @@ class ImportCSVJob implements ShouldQueue
             $inserts = [];
 
             foreach ($rows as $row) {
-                $emso = $row[0];
+                $emso = $row['emso'];
                 $existingUser = ImportUser::where('emso', $emso)->first();
-
+       
                 $data = [
-                    'name_surname' => $row[1],
-                    'country' => $row[2],
-                    'age' => $row[3],
-                    'descriptions' => $row[4],
+                    'name_surname' => $row['name'],
+                    'country' => $row['country'],
+                    'age' => (int)$row['age'],
+                    'descriptions' => $row['description'],
                     'updated_at' => $currentTimestamp,
                 ];
-
+        
                 if ($existingUser) {
                     $updates[] = $data + ['emso' => $emso];
                 } else {
+                    // Construct the insert data with the fields in the correct order
                     $inserts[] = $data + [
                         'emso' => $emso,
                         'created_at' => $currentTimestamp,
                     ];
                 }
             }
-
+        
             if (!empty($updates)) {
                 // Bulk update existing records
                 foreach (array_chunk($updates, 1000) as $chunk) {
                     ImportUser::upsert($chunk, ['emso'], array_keys($chunk[0]));
                 }
             }
-
+        
             if (!empty($inserts)) {
                 // Bulk insert new records
                 ImportUser::insert($inserts);
