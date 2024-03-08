@@ -48,11 +48,15 @@ class ImportCSVJob implements ShouldQueue
                 $headers = explode(';', $row[0]); // Split the first row on the semicolon delimiter
                 continue; // Skip the first row
             }
-            $headers[0]=0;
-            $headers[1]=1;
-            $headers[2]=2;
-            $headers[3]=3;
-            $headers[4]=4;
+            $headers = [
+                0 => 0,
+                1 => 1,
+                2 => 2,
+                3 => 3,
+                4 => 4,
+
+            ];
+            
             // Combine headers with row data
             $rowData = array_combine($headers, explode(';', $row[0]));
 
